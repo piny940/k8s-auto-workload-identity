@@ -1,31 +1,32 @@
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: manager-role
 rules:
-  - apiGroups:
-      - k8s.piny940.com
-    resources:
-      - providers
-    verbs:
-      - create
-      - delete
-      - get
-      - list
-      - patch
-      - update
-      - watch
-  - apiGroups:
-      - k8s.piny940.com
-    resources:
-      - providers/finalizers
-    verbs:
-      - update
-  - apiGroups:
-      - k8s.piny940.com
-    resources:
-      - providers/status
-    verbs:
-      - get
-      - patch
-      - update
+- apiGroups:
+  - k8s.piny940.com
+  resources:
+  - providers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.piny940.com
+  resources:
+  - providers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - k8s.piny940.com
+  resources:
+  - providers/status
+  verbs:
+  - get
+  - patch
+  - update
