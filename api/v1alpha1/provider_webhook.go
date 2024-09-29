@@ -44,7 +44,9 @@ var _ webhook.Defaulter = &Provider{}
 func (r *Provider) Default() {
 	providerlog.Info("default", "name", r.Name)
 
-	// TODO(user): fill in your defaulting logic.
+	if r.Spec.Location == "" {
+		r.Spec.Location = "global"
+	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -58,7 +60,6 @@ var _ webhook.Validator = &Provider{}
 func (r *Provider) ValidateCreate() (admission.Warnings, error) {
 	providerlog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil, nil
 }
 
