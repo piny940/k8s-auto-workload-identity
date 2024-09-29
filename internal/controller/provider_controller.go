@@ -36,6 +36,7 @@ type ProviderReconciler struct {
 // +kubebuilder:rbac:groups=k8s.piny940.com,resources=providers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.piny940.com,resources=providers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8s.piny940.com,resources=providers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=events,verbs=create;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
