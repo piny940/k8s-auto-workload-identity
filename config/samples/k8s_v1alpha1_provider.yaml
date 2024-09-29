@@ -6,5 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: provider-sample
 spec:
-
-# TODO(user): Add fields here
+  target: gcp
+  poolID: pool
+  providerID: cluster
+  project:
+    name: gcp-project
+    number: "0123456789"

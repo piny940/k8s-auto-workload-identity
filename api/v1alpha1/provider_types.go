@@ -28,18 +28,46 @@ type ProviderSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Provider. Edit provider_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:validation:Required
+	Target string `json:"target"`
+
+	// +kubebuilder:validation:Required
+	PoolID string `json:"poolID"`
+
+	// +kubebuilder:default="global"
+	Location string `json:"location"`
+
+	// +kubebuilder:validation:Required
+	ProviderID string `json:"providerID"`
+
+	// +kubebuilder:validation:Required
+	Project Project `json:"project"`
+}
+
+type Project struct {
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// +kubebuilder:validation:Required
+	Number string `json:"number"`
 }
 
 // ProviderStatus defines the observed state of Provider
 type ProviderStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []metav1.Condition `json:"conditions"`
 }
+
+const (
+	TypeProviderAvailable = "Available"
+	TypeProviderFailed    = "Failed"
+)
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID"
+// +kubebuilder:printcolumn:name="Available",type="string",JSONPath=".status.conditions[?(@.type==\"Available\")].status"
 
 // Provider is the Schema for the providers API
 type Provider struct {
