@@ -7,4 +7,18 @@ layout:
 - go.kubebuilder.io/v4
 projectName: kwimount
 repo: github.com/piny940/kwimount
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: piny940.com
+  group: k8s
+  kind: Provider
+  path: github.com/piny940/kwimount/api/v1alpha1
+  version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"

@@ -1,0 +1,14 @@
+apiVersion: k8s.piny940.com/v1alpha1
+kind: Provider
+metadata:
+  labels:
+    app.kubernetes.io/name: kwimount
+    app.kubernetes.io/managed-by: kustomize
+  name: provider-sample
+spec:
+  target: gcp
+  poolID: pool
+  providerID: cluster
+  project:
+    name: gcp-project
+    number: "0123456789"
