@@ -19,6 +19,8 @@ package controller
 import (
 	"context"
 
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +39,7 @@ type ProviderReconciler struct {
 // +kubebuilder:rbac:groups=k8s.piny940.com,resources=providers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8s.piny940.com,resources=providers/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;update;patch
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;watch;list;create;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -51,7 +54,17 @@ func (r *ProviderReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
-
+	var deployments appsv1.DeploymentList
+	err := r.List(ctx, &deployments, &client.ListOptions{
+		Namespace:     "default",
+		LabelSelector: labels.SelectorFromSet(map[string]string{"app": "sample"}),
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	for _, deploy := range deployments.Items {
+		log.Log.Info("Deployment", "name", deploy.Name)
+	}
 	return ctrl.Result{}, nil
 }
 
