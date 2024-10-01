@@ -28,14 +28,24 @@ type WorkloadIdentitySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of WorkloadIdentity. Edit workloadidentity_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:validation:Required
+	Deployment           string                   `json:"deployment"`
+	TargetServiceAccount string                   `json:"targetServiceAccount"`
+	Provider             WorkloadIdentityProvider `json:"provider"`
+}
+
+type WorkloadIdentityProvider struct {
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+	// +kubebuilder:validation:Required
+	Namespace string `json:"namespace"`
 }
 
 // WorkloadIdentityStatus defines the observed state of WorkloadIdentity
 type WorkloadIdentityStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []metav1.Condition `json:"condition"`
 }
 
 // +kubebuilder:object:root=true

@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -44,7 +45,9 @@ var _ webhook.Defaulter = &WorkloadIdentity{}
 func (r *WorkloadIdentity) Default() {
 	workloadidentitylog.Info("default", "name", r.Name)
 
-	// TODO(user): fill in your defaulting logic.
+	if r.Spec.Provider.Namespace == "" {
+		r.Spec.Provider.Namespace = r.Namespace
+	}
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
@@ -58,22 +61,32 @@ var _ webhook.Validator = &WorkloadIdentity{}
 func (r *WorkloadIdentity) ValidateCreate() (admission.Warnings, error) {
 	workloadidentitylog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
-	return nil, nil
+	return r.validate()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *WorkloadIdentity) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	workloadidentitylog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
-	return nil, nil
+	return r.validate()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *WorkloadIdentity) ValidateDelete() (admission.Warnings, error) {
 	workloadidentitylog.Info("validate delete", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object deletion.
+	return nil, nil
+}
+
+func (r *WorkloadIdentity) validate() (admission.Warnings, error) {
+	if r.Spec.Deployment == "" {
+		return nil, field.Invalid(field.NewPath("spec", "deployment"), r.Spec.Deployment, "deployment cannot be empty")
+	}
+	if r.Spec.TargetServiceAccount == "" {
+		return nil, field.Invalid(field.NewPath("spec", "targetServiceAccount"), r.Spec.TargetServiceAccount, "targetServiceAccount cannot be empty")
+	}
+	if r.Spec.Provider.Name == "" {
+		return nil, field.Invalid(field.NewPath("spec", "provider", "name"), r.Spec.Provider.Name, "provider name cannot be empty")
+	}
 	return nil, nil
 }
