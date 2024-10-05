@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	appsv1apply "k8s.io/client-go/applyconfigurations/apps/v1"
 	corev1apply "k8s.io/client-go/applyconfigurations/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -47,6 +47,7 @@ const (
 	GCP_TOKEN_MOUNT_PATH         = "/var/run/kwimount-gcp-service-account/"
 	GCP_TOKEN_PATH               = "token"
 	GCP_CONFIGURATION_MOUNT_PATH = "/etc/kwimount-gcp-workload-identity/"
+	GCP_CONFIGURATION_FILE_NAME  = "gcp-credential-configuration.json"
 	GCP_TOKEN_VOLUME_NAME        = "kwimount-gcp-token"
 	GCP_TOKEN_AUDIENCE           = "https://iam.googleapis.com/projects/%s/locations/%s/workloadIdentityPools/%s/providers/%s"
 	TOKEN_EXPIRATION_SEC         = 3600
@@ -100,6 +101,24 @@ func (r *WorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, nil
 }
 
+const (
+	GCP_CONF_BASE = `{
+  "universe_domain": "googleapis.com",
+  "type": "external_account",
+  "audience": "//iam.googleapis.com/projects/%s/locations/%s/workloadIdentityPools/%s/providers/%s",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+  "token_url": "https://sts.googleapis.com/v1/token",
+  "credential_source": {
+    "file": "%s",
+    "format": {
+      "type": "text"
+    }
+  },
+  "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken"
+}`
+	GOOGLE_CREDENTIALS_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
+)
+
 func (r *WorkloadIdentityReconciler) reconcileConfigMap(ctx context.Context, wi *k8sv1alpha1.WorkloadIdentity, pr *k8sv1alpha1.Provider) error {
 	logger := log.FromContext(ctx)
 
@@ -131,20 +150,8 @@ func (r *WorkloadIdentityReconciler) reconcileConfigMap(ctx context.Context, wi 
 
 func gcpConfigMapData(wi *k8sv1alpha1.WorkloadIdentity, pr *k8sv1alpha1.Provider) map[string]string {
 	return map[string]string{
-		"data": fmt.Sprintf(`{
-  "universe_domain": "googleapis.com",
-  "type": "external_account",
-  "audience": "//iam.googleapis.com/projects/%s/locations/%s/workloadIdentityPools/%s/providers/%s",
-  "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
-  "token_url": "https://sts.googleapis.com/v1/token",
-  "credential_source": {
-    "file": %s,
-    "format": {
-      "type": "text"
-    }
-  },
-  "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/%s:generateAccessToken"
-}`, pr.Spec.Project.Number,
+		GCP_CONFIGURATION_FILE_NAME: fmt.Sprintf(GCP_CONF_BASE,
+			pr.Spec.Project.Number,
 			pr.Spec.Location,
 			pr.Spec.PoolID,
 			pr.Spec.ProviderID,
@@ -170,6 +177,10 @@ func (r *WorkloadIdentityReconciler) reconcileDeployment(ctx context.Context, wi
 	for _, container := range current.Spec.Template.Spec.Containers {
 		containers = append(containers, corev1apply.Container().
 			WithName(container.Name).
+			WithEnv(corev1apply.EnvVar().
+				WithName(GOOGLE_CREDENTIALS_ENV).
+				WithValue(GCP_CONFIGURATION_MOUNT_PATH+GCP_CONFIGURATION_FILE_NAME),
+			).
 			WithVolumeMounts(
 				corev1apply.VolumeMount().
 					WithName(GCP_TOKEN_VOLUME_NAME).
@@ -194,7 +205,7 @@ func (r *WorkloadIdentityReconciler) reconcileDeployment(ctx context.Context, wi
 								WithName(configMapName(wi)),
 							),
 						corev1apply.Volume().
-							WithName("kwimount-gcp-token").
+							WithName(GCP_TOKEN_VOLUME_NAME).
 							WithProjected(
 								corev1apply.ProjectedVolumeSource().
 									WithSources(corev1apply.VolumeProjection().
@@ -226,7 +237,7 @@ func (r *WorkloadIdentityReconciler) reconcileDeployment(ctx context.Context, wi
 	patch := &unstructured.Unstructured{Object: obj}
 	err = r.Patch(ctx, patch, client.Apply, &client.PatchOptions{
 		FieldManager: FIELD_MANAGER,
-		Force:        pointer.Bool(true),
+		Force:        ptr.To(true),
 	})
 	logger.Info("successfully patched Deployment with name: %s, namespace: %s", wi.Spec.Deployment, wi.Namespace)
 	return nil
