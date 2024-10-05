@@ -6,8 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: workloadidentity-sample
 spec:
-  deployment:
-    namespace: default
-    name: sample-deployment
+  deployment: sample-deployment
   targetServiceAccount: sample-service-account
-  provider: provider-sample
+  provider:
+    name: provider-sample
