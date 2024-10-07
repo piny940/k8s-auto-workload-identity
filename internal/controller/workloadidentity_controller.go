@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -51,6 +52,7 @@ const (
 	GCP_TOKEN_VOLUME_NAME        = "kwimount-gcp-token"
 	GCP_TOKEN_AUDIENCE           = "https://iam.googleapis.com/projects/%s/locations/%s/workloadIdentityPools/%s/providers/%s"
 	TOKEN_EXPIRATION_SEC         = 3600
+	RETRY_INTERVAL               = 10 * time.Minute
 )
 
 // +kubebuilder:rbac:groups=k8s.piny940.com,resources=workloadidentities,verbs=get;list;watch;create;update;patch;delete
@@ -61,11 +63,6 @@ const (
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the WorkloadIdentity object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.19.0/pkg/reconcile
 func (r *WorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -84,17 +81,32 @@ func (r *WorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Name:      wi.Spec.Provider.Name,
 	}, &provider)
 	if err != nil {
-		logger.Error(err, "unable to fetch Provider")
-		return ctrl.Result{}, err
+		logger.Info("unable to fetch Provider with name: %s, namespace: %s. Will retry in %d seconds",
+			wi.Spec.Provider.Name,
+			wi.Spec.Provider.Namespace,
+			int(RETRY_INTERVAL.Seconds()),
+		)
+		return ctrl.Result{RequeueAfter: RETRY_INTERVAL}, err
 	}
 	err = r.reconcileConfigMap(ctx, &wi, &provider)
 	if err != nil {
-		logger.Error(err, "unable to reconcile ConfigMap")
 		return ctrl.Result{}, err
 	}
-	err = r.reconcileDeployment(ctx, &wi, &provider)
+	dep := &appsv1.Deployment{}
+	err = r.Client.Get(ctx, client.ObjectKey{
+		Namespace: wi.Namespace,
+		Name:      wi.Spec.Deployment,
+	}, dep)
 	if err != nil {
-		logger.Error(err, "unable to reconcile Deployment")
+		logger.Info("unable to fetch Deployment with name: %s, namespace: %s. Will retry in %d seconds",
+			wi.Spec.Deployment,
+			wi.Namespace,
+			int(RETRY_INTERVAL.Seconds()),
+		)
+		return ctrl.Result{RequeueAfter: RETRY_INTERVAL}, err
+	}
+	err = r.reconcileDeployment(ctx, &wi, &provider, dep)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -160,18 +172,8 @@ func gcpConfigMapData(wi *k8sv1alpha1.WorkloadIdentity, pr *k8sv1alpha1.Provider
 		)}
 }
 
-func (r *WorkloadIdentityReconciler) reconcileDeployment(ctx context.Context, wi *k8sv1alpha1.WorkloadIdentity, pr *k8sv1alpha1.Provider) error {
+func (r *WorkloadIdentityReconciler) reconcileDeployment(ctx context.Context, wi *k8sv1alpha1.WorkloadIdentity, pr *k8sv1alpha1.Provider, current *appsv1.Deployment) error {
 	logger := log.FromContext(ctx)
-
-	var current appsv1.Deployment
-	err := r.Get(ctx, client.ObjectKey{
-		Namespace: wi.Namespace,
-		Name:      wi.Spec.Deployment,
-	}, &current)
-	if err != nil {
-		logger.Error(err, "unable to fetch Deployment")
-		return err
-	}
 
 	containers := make([]*corev1apply.ContainerApplyConfiguration, 0, len(current.Spec.Template.Spec.Containers))
 	for _, container := range current.Spec.Template.Spec.Containers {
@@ -221,7 +223,7 @@ func (r *WorkloadIdentityReconciler) reconcileDeployment(ctx context.Context, wi
 				),
 			),
 		)
-	currentApply, err := appsv1apply.ExtractDeployment(&current, FIELD_MANAGER)
+	currentApply, err := appsv1apply.ExtractDeployment(current, FIELD_MANAGER)
 	if err != nil {
 		logger.Error(err, "unable to extract current Deployment")
 		return err
