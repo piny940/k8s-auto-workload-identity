@@ -50,6 +50,7 @@ type WorkloadIdentityStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Done\")].status"
 
 // WorkloadIdentity is the Schema for the workloadidentities API
 type WorkloadIdentity struct {
@@ -59,6 +60,11 @@ type WorkloadIdentity struct {
 	Spec   WorkloadIdentitySpec   `json:"spec,omitempty"`
 	Status WorkloadIdentityStatus `json:"status,omitempty"`
 }
+
+const (
+	TypeWorkloadIdentityDone = "Done"
+	TypeWorkloadIdentityFail = "Fail"
+)
 
 // +kubebuilder:object:root=true
 

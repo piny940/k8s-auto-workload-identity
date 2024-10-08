@@ -14,7 +14,11 @@ spec:
     singular: workloadidentity
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Done")].status
+      name: Ready
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: WorkloadIdentity is the Schema for the workloadidentities API

@@ -69,15 +69,9 @@ type ProviderStatus struct {
 	Conditions []metav1.Condition `json:"conditions"`
 }
 
-const (
-	TypeProviderAvailable = "Available"
-	TypeProviderFailed    = "Failed"
-)
-
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID"
-// +kubebuilder:printcolumn:name="Available",type="string",JSONPath=".status.conditions[?(@.type==\"Available\")].status"
 
 // Provider is the Schema for the providers API
 type Provider struct {

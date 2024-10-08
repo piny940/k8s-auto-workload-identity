@@ -24,6 +24,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	appsv1apply "k8s.io/client-go/applyconfigurations/apps/v1"
@@ -52,7 +54,7 @@ const (
 	GCP_TOKEN_VOLUME_NAME        = "kwimount-gcp-token"
 	GCP_TOKEN_AUDIENCE           = "https://iam.googleapis.com/projects/%s/locations/%s/workloadIdentityPools/%s/providers/%s"
 	TOKEN_EXPIRATION_SEC         = 3600
-	RETRY_INTERVAL               = 10 * time.Minute
+	RETRY_INTERVAL               = 24 * time.Hour
 )
 
 // +kubebuilder:rbac:groups=k8s.piny940.com,resources=workloadidentities,verbs=get;list;watch;create;update;patch;delete
@@ -98,19 +100,22 @@ func (r *WorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Name:      wi.Spec.Deployment,
 	}, dep)
 	if err != nil {
-		logger.Info("unable to fetch Deployment with name: %s, namespace: %s. Will retry in %d seconds",
+		logger.Info("unable to fetch Deployment with name: %s, namespace: %s.",
 			wi.Spec.Deployment,
 			wi.Namespace,
-			int(RETRY_INTERVAL.Seconds()),
 		)
-		return ctrl.Result{RequeueAfter: RETRY_INTERVAL}, err
+		return ctrl.Result{}, err
 	}
 	err = r.reconcileDeployment(ctx, &wi, &provider, dep)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	err = r.updateStatus(ctx, &wi)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: RETRY_INTERVAL}, nil
 }
 
 const (
@@ -154,7 +159,9 @@ func (r *WorkloadIdentityReconciler) reconcileConfigMap(ctx context.Context, wi 
 		logger.Error(err, "unable to createOrUpdate ConfigMap")
 		return err
 	}
-	if op != controllerutil.OperationResultNone {
+	if op == controllerutil.OperationResultNone {
+		logger.Info("ConfigMap is up to date")
+	} else {
 		logger.Info("successfully reconciled ConfigMap", "operation", op)
 	}
 	return nil
@@ -229,6 +236,7 @@ func (r *WorkloadIdentityReconciler) reconcileDeployment(ctx context.Context, wi
 		return err
 	}
 	if equality.Semantic.DeepEqual(expected, currentApply) {
+		logger.Info("Deployment is up to date")
 		return nil
 	}
 	obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(expected)
@@ -242,6 +250,54 @@ func (r *WorkloadIdentityReconciler) reconcileDeployment(ctx context.Context, wi
 		Force:        ptr.To(true),
 	})
 	logger.Info("successfully patched Deployment with name: %s, namespace: %s", wi.Spec.Deployment, wi.Namespace)
+	return nil
+}
+
+func (r *WorkloadIdentityReconciler) updateStatus(ctx context.Context, wi *k8sv1alpha1.WorkloadIdentity) error {
+	logger := log.FromContext(ctx)
+
+	cm := &corev1.ConfigMap{}
+	err := r.Client.Get(ctx, client.ObjectKey{
+		Namespace: wi.Namespace,
+		Name:      configMapName(wi),
+	}, cm)
+	if client.IgnoreNotFound(err) != nil {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	dep := &appsv1.Deployment{}
+	err = r.Client.Get(ctx, client.ObjectKey{
+		Namespace: wi.Namespace,
+		Name:      wi.Spec.Deployment,
+	}, dep)
+	if client.IgnoreNotFound(err) != nil {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	volumeCreated := false
+	for _, volume := range dep.Spec.Template.Spec.Volumes {
+		if volume.Name == GCP_TOKEN_VOLUME_NAME {
+			volumeCreated = true
+			break
+		}
+	}
+	if volumeCreated {
+		meta.SetStatusCondition(&wi.Status.Conditions, metav1.Condition{
+			Type:   k8sv1alpha1.TypeWorkloadIdentityDone,
+			Status: metav1.ConditionTrue,
+			Reason: "ok",
+		})
+	}
+	err = r.Status().Update(ctx, wi)
+	if err != nil {
+		logger.Error(err, "unable to update WorkloadIdentity status")
+		return err
+	}
 	return nil
 }
 
