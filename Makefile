@@ -69,7 +69,7 @@ test-e2e:
 	go test ./test/e2e/ -v -ginkgo.v
 
 .PHONY: lint
-lint: golangci-lint ## Run golangci-lint linter
+lint:
 	$(GOLANGCI_LINT) run
 
 .PHONY: lint-fix
