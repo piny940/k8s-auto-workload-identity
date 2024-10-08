@@ -1,13 +1,11 @@
-name: Run Make Test
+name: Run CI
 on:
   push:
     branches:
       - main
   pull_request:
-
 permissions:
   contents: read
-
 jobs:
   test:
     runs-on: ubuntu-latest
