@@ -249,6 +249,10 @@ func (r *WorkloadIdentityReconciler) reconcileDeployment(ctx context.Context, wi
 		FieldManager: FIELD_MANAGER,
 		Force:        ptr.To(true),
 	})
+	if err != nil {
+		logger.Error(err, "unable to patch Deployment")
+		return err
+	}
 	logger.Info("successfully patched Deployment with name: %s, namespace: %s", wi.Spec.Deployment, wi.Namespace)
 	return nil
 }
