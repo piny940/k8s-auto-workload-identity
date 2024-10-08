@@ -23,74 +23,58 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-type ProviderTargetType string
-
-const (
-	ProviderTargetTypeGCP ProviderTargetType = "gcp"
-)
-
-var AllProviderTargetTypes = []ProviderTargetType{
-	ProviderTargetTypeGCP,
-}
-
-// ProviderSpec defines the desired state of Provider
-type ProviderSpec struct {
+// WorkloadIdentitySpec defines the desired state of WorkloadIdentity
+type WorkloadIdentitySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// +kubebuilder:validation:Required
-	Target ProviderTargetType `json:"target"`
-
-	// +kubebuilder:validation:Required
-	PoolID string `json:"poolID"`
-
-	// +kubebuilder:default="global"
-	Location string `json:"location"`
-
-	// +kubebuilder:validation:Required
-	ProviderID string `json:"providerID"`
-
-	// +kubebuilder:validation:Required
-	Project Project `json:"project"`
+	Deployment           string                   `json:"deployment"`
+	TargetServiceAccount string                   `json:"targetServiceAccount"`
+	Provider             WorkloadIdentityProvider `json:"provider"`
 }
 
-type Project struct {
+type WorkloadIdentityProvider struct {
 	// +kubebuilder:validation:Required
 	Name string `json:"name"`
-
 	// +kubebuilder:validation:Required
-	Number string `json:"number"`
+	Namespace string `json:"namespace"`
 }
 
-// ProviderStatus defines the observed state of Provider
-type ProviderStatus struct {
+// WorkloadIdentityStatus defines the observed state of WorkloadIdentity
+type WorkloadIdentityStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Conditions []metav1.Condition `json:"conditions"`
+	Conditions []metav1.Condition `json:"condition"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID"
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Done\")].status"
 
-// Provider is the Schema for the providers API
-type Provider struct {
+// WorkloadIdentity is the Schema for the workloadidentities API
+type WorkloadIdentity struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ProviderSpec   `json:"spec,omitempty"`
-	Status ProviderStatus `json:"status,omitempty"`
+	Spec   WorkloadIdentitySpec   `json:"spec,omitempty"`
+	Status WorkloadIdentityStatus `json:"status,omitempty"`
 }
+
+const (
+	TypeWorkloadIdentityDone = "Done"
+	TypeWorkloadIdentityFail = "Fail"
+)
 
 // +kubebuilder:object:root=true
 
-// ProviderList contains a list of Provider
-type ProviderList struct {
+// WorkloadIdentityList contains a list of WorkloadIdentity
+type WorkloadIdentityList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Provider `json:"items"`
+	Items           []WorkloadIdentity `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Provider{}, &ProviderList{})
+	SchemeBuilder.Register(&WorkloadIdentity{}, &WorkloadIdentityList{})
 }

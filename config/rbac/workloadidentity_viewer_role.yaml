@@ -1,0 +1,23 @@
+# permissions for end users to view workloadidentities.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: kwimount
+    app.kubernetes.io/managed-by: kustomize
+  name: workloadidentity-viewer-role
+rules:
+  - apiGroups:
+      - k8s.piny940.com
+    resources:
+      - workloadidentities
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - k8s.piny940.com
+    resources:
+      - workloadidentities/status
+    verbs:
+      - get

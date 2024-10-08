@@ -18,6 +18,18 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - events
   verbs:
   - create
@@ -27,6 +39,7 @@ rules:
   - k8s.piny940.com
   resources:
   - providers
+  - workloadidentities
   verbs:
   - create
   - delete
@@ -39,12 +52,14 @@ rules:
   - k8s.piny940.com
   resources:
   - providers/finalizers
+  - workloadidentities/finalizers
   verbs:
   - update
 - apiGroups:
   - k8s.piny940.com
   resources:
   - providers/status
+  - workloadidentities/status
   verbs:
   - get
   - patch

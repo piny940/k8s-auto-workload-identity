@@ -1,0 +1,12 @@
+apiVersion: k8s.piny940.com/v1alpha1
+kind: WorkloadIdentity
+metadata:
+  labels:
+    app.kubernetes.io/name: kwimount
+    app.kubernetes.io/managed-by: kustomize
+  name: workloadidentity-sample
+spec:
+  deployment: sample-deployment
+  targetServiceAccount: sample-service-account
+  provider:
+    name: provider-sample

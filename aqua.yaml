@@ -1,4 +1,3 @@
----
 # aqua - Declarative CLI Version Manager
 # https://aquaproj.github.io/
 # checksum:
@@ -10,6 +9,6 @@ registries:
   - type: standard
     ref: v4.227.0 # renovate: depName=aquaproj/aqua-registry
 packages:
-- name: tilt-dev/tilt@v0.33.20
-- name: tilt-dev/ctlptl@v0.8.34
-- name: kubernetes-sigs/controller-tools/controller-gen@envtest-v1.31.0
+  - name: tilt-dev/tilt@v0.33.20
+  - name: tilt-dev/ctlptl@v0.8.34
+  - name: kubernetes-sigs/controller-tools/controller-gen@envtest-v1.31.0
