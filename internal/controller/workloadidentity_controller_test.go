@@ -143,12 +143,14 @@ var _ = Describe("WorkloadIdentity Controller", func() {
 			label, err := labels.Parse("app=test-app")
 			Expect(err).NotTo(HaveOccurred())
 			err = k8sClient.List(ctx, deps, &client.ListOptions{LabelSelector: label})
+			Expect(err).NotTo(HaveOccurred())
 			for _, dep := range deps.Items {
 				Expect(k8sClient.Delete(ctx, &dep)).To(Succeed())
 			}
 
 			confs := &corev1.ConfigMapList{}
 			err = k8sClient.List(ctx, confs)
+			Expect(err).NotTo(HaveOccurred())
 			for _, conf := range confs.Items {
 				Expect(k8sClient.Delete(ctx, &conf)).To(Succeed())
 			}
